@@ -17,16 +17,18 @@ type Direction =
     | Up
     | Right
     | Down
-    | None
+    | Noop
 
 
 type Model =
     { GameState: GameState
-      PlayerDirection: Direction }
+      PlayerDirection: Direction
+      PlayingSound: string option }
 
 let init () : Model =
     { GameState = Start
-      PlayerDirection = None }
+      PlayerDirection = Noop
+      PlayingSound = None }
 
 let keyToDirection (event: KeyboardEvent) =
     match event.code with
@@ -34,16 +36,18 @@ let keyToDirection (event: KeyboardEvent) =
     | "ArrowUp" -> Up
     | "ArrowRight" -> Right
     | "ArrowDown" -> Down
-    | _ -> None
+    | _ -> Noop
 
 // --- MODEL VALUE HELPERS ---
 let getGameState m = m.GameState
 let getDirection m = m.PlayerDirection
+let getPlayingSound m = m.PlayingSound
 
 // --- MESSAGES ---
 type Message =
     | StartGame
     | KeyDown of KeyboardEvent
+    | PlaySound of string // TODO Make sounds DU?
 
 // --- MESSAGE HANDLING, MODEL UPDATES ---
 
@@ -54,6 +58,7 @@ let update (msg: Message) (model: Model) : Model =
     | KeyDown event ->
         let direction = event |> keyToDirection
         { model with PlayerDirection = direction }
+    | PlaySound s -> { model with PlayingSound = Some s }
 
 // --- VIEWS ---
 let startView (dispatch) =
@@ -67,12 +72,21 @@ let startView (dispatch) =
                           Html.p "Pick up 🥛 or 🍪 to regain health."
                           Html.p "If your health reaches 0 Christmas is canceled!"
                           Html.button [ class' "button"
-                                        text "Save Santa!"
+                                        text "Save Santa's!"
                                         onClick (fun _ -> dispatch StartGame) [] ] ] ]
 
 let playView (model: IStore<Model>) (dispatch: Dispatch<Message>) =
     Html.div [ Html.div "PLAY"
-               Bind.el ((model |> Store.map getDirection), (fun d -> Html.div "meh")) ]
+               Bind.el (
+                   (model |> Store.map getDirection),
+                   (fun d ->
+                       Html.div [ Html.button [ type' "button"
+                                                text "Make a sound"
+                                                onClick (fun _ -> PlaySound "pickup-Enter.wav" |> dispatch) [] ]
+                                  Html.button [ type' "button"
+                                                text "Make another sound"
+                                                onClick (fun _ -> PlaySound "gameover-Event3.mp3" |> dispatch) [] ] ])
+               ) ]
 
 let noopView () = Html.h1 "NOTHING HERE YET"
 
@@ -97,7 +111,22 @@ let view () =
                        | Start -> startView (dispatch)
                        | Playing -> playView model dispatch
                        | _ -> noopView ())
-               ) ]
+               )
+
+               // Keep audio tags here to avoid re-creating (and thus restarting) them on state changes
+            //    Html.audio [ Attr.autoPlay true
+            //                 Attr.loop true
+            //                 Attr.src "sound/level1-SilentDarkNight.mp3" ]
+            //    Bind.el (
+            //        (model |> Store.map getPlayingSound),
+            //        (fun s ->
+            //            match s with
+            //            | None -> Html.text ""
+            //            | Some sound ->
+            //                Html.audio [ Attr.autoPlay true
+            //                             Attr.src ("sound/" + sound) ])
+            //    ) 
+               ]
 
 // Start the app
 view () |> Program.mountElement "sutil-app"
