@@ -1,5 +1,6 @@
 module App
 
+open System
 open Sutil
 open Sutil.DOM
 open Sutil.Attr
@@ -19,17 +20,23 @@ type Direction =
     | Down
     | Noop
 
+type SoundState = 
+    | Queued
+    | Started
+    | Ended
 
 type Model =
     { GameState: GameState
       PlayerDirection: Direction
-      PlayingSound: string option 
-      PlayMusic : bool}
+      PlayingSound: string option
+      PlayingSounds: (Guid * string * SoundState) list
+      PlayMusic: bool }
 
 let init () : Model =
     { GameState = Start
       PlayerDirection = Noop
       PlayingSound = None
+      PlayingSounds = []
       PlayMusic = false }
 
 let keyToDirection (event: KeyboardEvent) =
@@ -44,6 +51,7 @@ let keyToDirection (event: KeyboardEvent) =
 let getGameState m = m.GameState
 let getDirection m = m.PlayerDirection
 let getPlayingSound m = m.PlayingSound
+let getPlayingSounds m = m.PlayingSounds
 let getPlayMusic m = m.PlayMusic
 
 // --- MESSAGES ---
@@ -52,9 +60,21 @@ type Message =
     | KeyDown of KeyboardEvent
     | ToggleMusic
     | PlaySound of string // TODO Make sounds DU?
+    | SoundPlayed of Guid
+    | SoundPlaying of Guid
 
 // --- MESSAGE HANDLING, MODEL UPDATES ---
+let tplFst t = 
+    match t with
+    | x, _, _ -> x
 
+let tplSnd t = 
+    match t with
+    | _, x, _ -> x
+
+let tplThird t = 
+    match t with
+    | _, _, x -> x
 
 let update (msg: Message) (model: Model) : Model =
     match msg with
@@ -62,9 +82,17 @@ let update (msg: Message) (model: Model) : Model =
     | KeyDown event ->
         let direction = event |> keyToDirection
         { model with PlayerDirection = direction }
-    | ToggleMusic ->
-        {model with PlayMusic = not model.PlayMusic}
-    | PlaySound s -> { model with PlayingSound = Some s }
+    | ToggleMusic -> { model with PlayMusic = not model.PlayMusic }
+    | PlaySound s -> { model with PlayingSounds = (Guid.NewGuid(), s, Queued) :: model.PlayingSounds }
+    | SoundPlayed soundId -> {model with PlayingSounds = List.filter (fun s -> tplFst s <> soundId ) model.PlayingSounds}
+    | SoundPlaying soundId -> 
+        let fn s = 
+            let sId = tplFst s
+            if (sId = soundId) then
+                (tplFst s, tplSnd s, Started)
+            else 
+                s
+        { model with PlayingSounds = List.map fn model.PlayingSounds}
 
 // --- VIEWS ---
 let startView (dispatch) =
@@ -77,6 +105,7 @@ let startView (dispatch) =
                           Html.p "Pick up all presents 🎁🧸📗 before leaving the floor."
                           Html.p "Pick up 🥛 or 🍪 to regain health."
                           Html.p "If your health reaches 0 Christmas is canceled!"
+                          Html.p "Reach the top to save Santa's and Christmas!"
                           Html.button [ class' "button"
                                         text "Save Santa's!"
                                         onClick (fun _ -> dispatch StartGame) [] ] ] ]
@@ -99,6 +128,16 @@ let playView (model: IStore<Model>) (dispatch: Dispatch<Message>) =
 
 let noopView () = Html.h1 "NOTHING HERE YET"
 
+let audioPlay (sound: IObservable<Guid * string * SoundState>) dispatch =
+    Bind.el (sound, fun s -> 
+                let shouldPlay = (tplThird s = Queued)  
+                Html.audio [  
+                    on "play" (fun _ -> (dispatch (SoundPlaying (tplFst s)))) []  
+                    on "ended" (fun _ -> (dispatch (SoundPlayed (tplFst s)))) []  
+                    Attr.autoPlay shouldPlay
+                    Attr.src ("sound/" + tplSnd s) ]
+    )
+
 let view () =
     let model, dispatch =
         () |> Store.makeElmishSimple init update ignore
@@ -113,13 +152,14 @@ let view () =
                style [ Css.fontFamily "Arial, Helvetica, sans-serif"
                        Css.margin 20 ]
 
-               Bind.el
-                   ((model |> Store.map getGameState),
-                    (fun gs ->
-                        match gs with
-                        | Start -> startView (dispatch)
-                        | Playing -> playView model dispatch
-                        | _ -> noopView ()))
+               Bind.el (
+                   (model |> Store.map getGameState),
+                   (fun gs ->
+                       match gs with
+                       | Start -> startView (dispatch)
+                       | Playing -> playView model dispatch
+                       | _ -> noopView ())
+               )
 
                Bind.el
                    ((model |> Store.map getPlayMusic |> Store.distinct),
@@ -127,19 +167,12 @@ let view () =
                         match s with
                         | false -> Html.text ""
                         | true ->
-                            Html.audio [ Attr.autoPlay true; Attr.loop true; Attr.src "sound/level1-SilentDarkNight.mp3" ]))
+                            Html.audio [ Attr.autoPlay true
+                                         Attr.loop true
+                                         Attr.src "sound/level1-SilentDarkNight.mp3" ]))
 
-               Bind.el (
-                   // every sound only plays once if it should play multiple times in sequence
-                   // maybe work with a "append-only" collection? but when to clean-up?
-                   (model |> Store.map getPlayingSound |> Store.distinct),
-                   (fun s ->
-                       match s with
-                       | None -> Html.text ""
-                       | Some sound ->
-                           Html.audio [ Attr.autoPlay true
-                                        Attr.src ("sound/" + sound) ])
-               ) ]
+               Bind.each ((model |> Store.map (fun x -> x.PlayingSounds)), (fun s -> audioPlay s dispatch), tplFst)
+                ]
 
 // Start the app
 view () |> Program.mountElement "sutil-app"
