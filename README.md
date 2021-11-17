@@ -1,15 +1,29 @@
-## Sutil Template for Elmish
+# Saving Santa's (basement) with Sutil
 
-The simplest Sutil Elmish application. This gives you a development area and shows how a single page Elmish application is constructed and mounted with minimal styling. See
-- src/App/App.fs.
-- public/index.html
+## What's next
+- refactoring Sound management with useful types instead of strings and tuples
+- adding "components" and "systems" (think ECS-based architecture)
+- defining a level
+- rendering a level
+- moving the player
+- "collision detection"
+- collecting things
+- ogres and ogre movement
+- player health and attacks
+- ogre attacks
+- losing the game
+- leaving the level
+- winning the game
+- ghosts and ghost movement and ghost attacks
+- adding more levels
 
-### Quick Start
+## Requirements
+I tested it with:
+- Windows 10
+- node 16.10.0
+- dotnet 5.0.201 
+- Chrome 95
 
-```
-    git clone -s https://github.com/davedawkins/sutil-template-elmish.git
-    cd sutil-template-elmish
-    dotnet tool restore
-    npm install
-    npm run start
-```
+## Running it
+- The first time: `dotnet tool restore && npm install`
+- Afterwards just: `npm run start`
