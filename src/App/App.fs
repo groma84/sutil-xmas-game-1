@@ -23,12 +23,14 @@ type Direction =
 type Model =
     { GameState: GameState
       PlayerDirection: Direction
-      PlayingSound: string option }
+      PlayingSound: string option 
+      PlayMusic : bool}
 
 let init () : Model =
     { GameState = Start
       PlayerDirection = Noop
-      PlayingSound = None }
+      PlayingSound = None
+      PlayMusic = false }
 
 let keyToDirection (event: KeyboardEvent) =
     match event.code with
@@ -42,11 +44,13 @@ let keyToDirection (event: KeyboardEvent) =
 let getGameState m = m.GameState
 let getDirection m = m.PlayerDirection
 let getPlayingSound m = m.PlayingSound
+let getPlayMusic m = m.PlayMusic
 
 // --- MESSAGES ---
 type Message =
     | StartGame
     | KeyDown of KeyboardEvent
+    | ToggleMusic
     | PlaySound of string // TODO Make sounds DU?
 
 // --- MESSAGE HANDLING, MODEL UPDATES ---
@@ -58,6 +62,8 @@ let update (msg: Message) (model: Model) : Model =
     | KeyDown event ->
         let direction = event |> keyToDirection
         { model with PlayerDirection = direction }
+    | ToggleMusic ->
+        {model with PlayMusic = not model.PlayMusic}
     | PlaySound s -> { model with PlayingSound = Some s }
 
 // --- VIEWS ---
@@ -81,6 +87,9 @@ let playView (model: IStore<Model>) (dispatch: Dispatch<Message>) =
                    (model |> Store.map getDirection),
                    (fun d ->
                        Html.div [ Html.button [ type' "button"
+                                                text "Toggle music"
+                                                onClick (fun _ -> ToggleMusic |> dispatch) [] ]
+                                  Html.button [ type' "button"
                                                 text "Make a sound"
                                                 onClick (fun _ -> PlaySound "pickup-Enter.wav" |> dispatch) [] ]
                                   Html.button [ type' "button"
@@ -104,29 +113,33 @@ let view () =
                style [ Css.fontFamily "Arial, Helvetica, sans-serif"
                        Css.margin 20 ]
 
-               Bind.el (
-                   (model |> Store.map getGameState),
-                   (fun gs ->
-                       match gs with
-                       | Start -> startView (dispatch)
-                       | Playing -> playView model dispatch
-                       | _ -> noopView ())
-               )
+               Bind.el
+                   ((model |> Store.map getGameState),
+                    (fun gs ->
+                        match gs with
+                        | Start -> startView (dispatch)
+                        | Playing -> playView model dispatch
+                        | _ -> noopView ()))
 
-               // Keep audio tags here to avoid re-creating (and thus restarting) them on state changes
-            //    Html.audio [ Attr.autoPlay true
-            //                 Attr.loop true
-            //                 Attr.src "sound/level1-SilentDarkNight.mp3" ]
-            //    Bind.el (
-            //        (model |> Store.map getPlayingSound),
-            //        (fun s ->
-            //            match s with
-            //            | None -> Html.text ""
-            //            | Some sound ->
-            //                Html.audio [ Attr.autoPlay true
-            //                             Attr.src ("sound/" + sound) ])
-            //    ) 
-               ]
+               Bind.el
+                   ((model |> Store.map getPlayMusic |> Store.distinct),
+                    (fun s ->
+                        match s with
+                        | false -> Html.text ""
+                        | true ->
+                            Html.audio [ Attr.autoPlay true; Attr.loop true; Attr.src "sound/level1-SilentDarkNight.mp3" ]))
+
+               Bind.el (
+                   // every sound only plays once if it should play multiple times in sequence
+                   // maybe work with a "append-only" collection? but when to clean-up?
+                   (model |> Store.map getPlayingSound |> Store.distinct),
+                   (fun s ->
+                       match s with
+                       | None -> Html.text ""
+                       | Some sound ->
+                           Html.audio [ Attr.autoPlay true
+                                        Attr.src ("sound/" + sound) ])
+               ) ]
 
 // Start the app
 view () |> Program.mountElement "sutil-app"
