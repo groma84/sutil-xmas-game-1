@@ -1,9 +1,13 @@
 .floor {
     width: 64px;
     height: 64px;
+    display: inline-block;
     background-color: lightgray;
 }
+
 .wall {
     width: 64px;
     height: 64px;
+    display: inline-block;
+
 }

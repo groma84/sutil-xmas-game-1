@@ -41,7 +41,8 @@ let worldHeight = 8
 
 let createWorld () =
     let allWalls = seq { 1 .. worldWidth } |> Seq.map (fun _ -> Wall) |> Seq.toList
-    allWalls @ allWalls @ allWalls @ allWalls @ allWalls @ allWalls @ allWalls @ allWalls |> List.toArray
+    let withFloors = [Wall; Floor; Floor; Floor; Floor; Floor; Floor; Wall;]
+    allWalls @ withFloors @ withFloors @ withFloors @ withFloors @ withFloors @ withFloors @ allWalls |> List.toArray
 
 let coordinatesToArrayIndex x y = 
     x + (y * worldWidth)
@@ -134,7 +135,7 @@ let startView (dispatch) =
                                         onClick (fun _ -> dispatch StartGame) [] ] ] ]
 
 let drawWorld (world : World) =
-    let floor () = Html.span [Attr.className "floor"]
+    let floor () = Html.span [Attr.className "floor"; Html.text " "]
     let wall () = Html.span [Attr.className "wall"; Html.text "🧱"]
     let rows = Array.chunkBySize worldWidth world
     let createCell cell =
