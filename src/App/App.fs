@@ -24,6 +24,11 @@ type SoundState =
     | Queued
     | Started
 
+type TileType =
+    | Wall
+    | Floor
+
+type World = TileType[]
 type Sound = {
     SoundId : Guid
     FileName : string
@@ -31,19 +36,31 @@ type Sound = {
 }
 let getSoundId (sound : Sound) = sound.SoundId
 
+let worldWidth = 8
+let worldHeight = 8
+
+let createWorld () =
+    let allWalls = seq { 1 .. worldWidth } |> Seq.map (fun _ -> Wall) |> Seq.toList
+    allWalls @ allWalls @ allWalls @ allWalls @ allWalls @ allWalls @ allWalls @ allWalls |> List.toArray
+
+let coordinatesToArrayIndex x y = 
+    x + (y * worldWidth)
+
 type Model =
     { GameState: GameState
       PlayerDirection: Direction
       PlayingSound: string option
       PlayingSounds: Sound list
-      PlayMusic: bool }
+      PlayMusic: bool
+      World : World }
 
 let init () : Model =
     { GameState = Start
       PlayerDirection = Noop
       PlayingSound = None
       PlayingSounds = []
-      PlayMusic = false }
+      PlayMusic = false
+      World = createWorld() }
 
 let keyToDirection (event: KeyboardEvent) =
     match event.code with
@@ -59,6 +76,7 @@ let getDirection m = m.PlayerDirection
 let getPlayingSound m = m.PlayingSound
 let getPlayingSounds m = m.PlayingSounds
 let getPlayMusic m = m.PlayMusic
+let getWorld m = m.World
 
 // --- MESSAGES ---
 type Message =
@@ -69,13 +87,19 @@ type Message =
     | SoundPlayed of Guid
     | SoundPlaying of Guid
 
+
+
+let tick model =
+    model
+
 // --- MESSAGE HANDLING, MODEL UPDATES ---
 let update (msg: Message) (model: Model) : Model =
     match msg with
     | StartGame -> { model with GameState = Playing }
     | KeyDown event ->
         let direction = event |> keyToDirection
-        { model with PlayerDirection = direction }
+        tick { model with PlayerDirection = direction }
+        
     | ToggleMusic -> { model with PlayMusic = not model.PlayMusic }
     | PlaySound soundFileName -> 
         let newSound = {
@@ -109,8 +133,22 @@ let startView (dispatch) =
                                         text "Save Santa's!"
                                         onClick (fun _ -> dispatch StartGame) [] ] ] ]
 
+let drawWorld (world : World) =
+    let floor () = Html.span [Attr.className "floor"]
+    let wall () = Html.span [Attr.className "wall"; Html.text "🧱"]
+    let rows = Array.chunkBySize worldWidth world
+    let createCell cell =
+        match cell with
+        | Floor -> floor ()
+        | Wall -> wall ()
+    let createRow row =
+        Html.div (Array.map createCell row)
+
+    fragment (Array.map createRow rows)
+
 let playView (model: IStore<Model>) (dispatch: Dispatch<Message>) =
     Html.div [ Html.div "PLAY"
+               Bind.el ((model |> Store.map getWorld), drawWorld)
                Bind.el (
                    (model |> Store.map getDirection),
                    (fun d ->

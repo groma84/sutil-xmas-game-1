@@ -1,0 +1,9 @@
+.floor {
+    width: 64px;
+    height: 64px;
+    background-color: lightgray;
+}
+.wall {
+    width: 64px;
+    height: 64px;
+}

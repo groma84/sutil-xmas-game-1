@@ -1,7 +1,6 @@
 # Saving Santa's (basement) with Sutil
 
 ## What's next
-- refactoring Sound management with useful types instead of strings and tuples
 - adding "resources", "components" and "systems" (think ECS-based architecture)
 - defining a level (Map, row-first encoding in an array?, striding)
 - rendering a level (divs in rows, "background" and "entity", 🧱 as walls, simple color als floor?)
