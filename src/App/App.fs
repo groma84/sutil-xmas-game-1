@@ -23,13 +23,19 @@ type Direction =
 type SoundState = 
     | Queued
     | Started
-    | Ended
+
+type Sound = {
+    SoundId : Guid
+    FileName : string
+    SoundState : SoundState
+}
+let getSoundId (sound : Sound) = sound.SoundId
 
 type Model =
     { GameState: GameState
       PlayerDirection: Direction
       PlayingSound: string option
-      PlayingSounds: (Guid * string * SoundState) list
+      PlayingSounds: Sound list
       PlayMusic: bool }
 
 let init () : Model =
@@ -64,18 +70,6 @@ type Message =
     | SoundPlaying of Guid
 
 // --- MESSAGE HANDLING, MODEL UPDATES ---
-let tplFst t = 
-    match t with
-    | x, _, _ -> x
-
-let tplSnd t = 
-    match t with
-    | _, x, _ -> x
-
-let tplThird t = 
-    match t with
-    | _, _, x -> x
-
 let update (msg: Message) (model: Model) : Model =
     match msg with
     | StartGame -> { model with GameState = Playing }
@@ -83,16 +77,21 @@ let update (msg: Message) (model: Model) : Model =
         let direction = event |> keyToDirection
         { model with PlayerDirection = direction }
     | ToggleMusic -> { model with PlayMusic = not model.PlayMusic }
-    | PlaySound s -> { model with PlayingSounds = (Guid.NewGuid(), s, Queued) :: model.PlayingSounds }
-    | SoundPlayed soundId -> {model with PlayingSounds = List.filter (fun s -> tplFst s <> soundId ) model.PlayingSounds}
+    | PlaySound soundFileName -> 
+        let newSound = {
+            SoundId = Guid.NewGuid()
+            FileName = soundFileName
+            SoundState = Queued
+        }
+        { model with PlayingSounds = newSound :: model.PlayingSounds }
+    | SoundPlayed soundId -> {model with PlayingSounds = List.filter (fun s -> s.SoundId <> soundId ) model.PlayingSounds}
     | SoundPlaying soundId -> 
-        let fn s = 
-            let sId = tplFst s
-            if (sId = soundId) then
-                (tplFst s, tplSnd s, Started)
+        let setPlayingSoundToStarted s = 
+            if (s.SoundId = soundId) then
+                {s with SoundState = Started}
             else 
                 s
-        { model with PlayingSounds = List.map fn model.PlayingSounds}
+        { model with PlayingSounds = List.map setPlayingSoundToStarted model.PlayingSounds}
 
 // --- VIEWS ---
 let startView (dispatch) =
@@ -128,14 +127,14 @@ let playView (model: IStore<Model>) (dispatch: Dispatch<Message>) =
 
 let noopView () = Html.h1 "NOTHING HERE YET"
 
-let audioPlay (sound: IObservable<Guid * string * SoundState>) dispatch =
+let createAudioTag dispatch (sound: IObservable<Sound>) =
     Bind.el (sound, fun s -> 
-                let shouldPlay = (tplThird s = Queued)  
+                let shouldPlay = (s.SoundState = Queued)  
                 Html.audio [  
-                    on "play" (fun _ -> (dispatch (SoundPlaying (tplFst s)))) []  
-                    on "ended" (fun _ -> (dispatch (SoundPlayed (tplFst s)))) []  
+                    on "play" (fun _ -> s.SoundId |> SoundPlaying |> dispatch) []  
+                    on "ended" (fun _ -> s.SoundId |> SoundPlayed |> dispatch) []  
                     Attr.autoPlay shouldPlay
-                    Attr.src ("sound/" + tplSnd s) ]
+                    Attr.src ("sound/" + s.FileName) ]
     )
 
 let view () =
@@ -156,7 +155,7 @@ let view () =
                    (model |> Store.map getGameState),
                    (fun gs ->
                        match gs with
-                       | Start -> startView (dispatch)
+                       | Start -> startView dispatch
                        | Playing -> playView model dispatch
                        | _ -> noopView ())
                )
@@ -171,7 +170,7 @@ let view () =
                                          Attr.loop true
                                          Attr.src "sound/level1-SilentDarkNight.mp3" ]))
 
-               Bind.each ((model |> Store.map (fun x -> x.PlayingSounds)), (fun s -> audioPlay s dispatch), tplFst)
+               Bind.each ((model |> Store.map getPlayingSounds), createAudioTag dispatch, getSoundId)
                 ]
 
 // Start the app

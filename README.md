@@ -2,20 +2,21 @@
 
 ## What's next
 - refactoring Sound management with useful types instead of strings and tuples
-- adding "components" and "systems" (think ECS-based architecture)
-- defining a level
-- rendering a level
+- adding "resources", "components" and "systems" (think ECS-based architecture)
+- defining a level (Map, row-first encoding in an array?, striding)
+- rendering a level (divs in rows, "background" and "entity", 🧱 as walls, simple color als floor?)
+- rendering the player 🧝 
 - moving the player
 - "collision detection"
 - collecting things
 - ogres and ogre movement
 - player health and attacks
-- ogre attacks
+- ogre attacks 
 - losing the game
-- leaving the level
+- leaving the level ⏫
 - winning the game
 - ghosts and ghost movement and ghost attacks
-- adding more levels
+- adding more levels?
 
 ## Requirements
 I tested it with:
