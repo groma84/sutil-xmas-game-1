@@ -77,6 +77,12 @@ let spawnPlayer () : Entity=
         Components = [Drawable {Icon = "🧝"}; Position{X=1;Y=1;} ]
     }
 
+let spawnOgre x y : Entity=
+    {
+        Id = Guid.NewGuid()
+        Components = [Drawable {Icon = "👹"}; Position{X=x;Y=y;} ]
+    }
+
 type Model =
     { GameState: GameState
       PlayerDirection: Direction
@@ -162,7 +168,15 @@ let tick (model : Model) =
 // --- MESSAGE HANDLING, MODEL UPDATES ---
 let update (msg: Message) (model: Model) : Model =
     match msg with
-    | StartGame -> { model with GameState = Playing; Entities = [spawnPlayer()] }
+    | StartGame -> 
+        let monsterX = Random.randomInt 2 (worldWidth-1)
+        let monsterY = Random.randomInt 2 (worldHeight-1)
+        { model with 
+            GameState = Playing; 
+            Entities = [
+                spawnPlayer()
+                spawnOgre monsterX monsterY
+            ] }
     | KeyDown event ->
         if model.GameState = Playing then
             let direction = event |> keyToDirection
@@ -247,10 +261,6 @@ let view () =
     Html.div [ disposeOnUnmount [ model ]
 
                onKeyDown (fun event -> KeyDown event |> dispatch) []
-
-               // See Sutil.Styling for more advanced styling options
-               style [ Css.fontFamily "Arial, Helvetica, sans-serif"
-                       Css.margin 20 ]
 
                Bind.el (
                    (model |> Store.map getGameState),

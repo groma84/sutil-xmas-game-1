@@ -1,10 +1,6 @@
 # Saving Santa's (basement) with Sutil
 
 ## What's next
-- adding "resources", "components" and "systems" (think ECS-based architecture)
-- defining a level (Map, row-first encoding in an array?, striding)
-- rendering a level (divs in rows, "background" and "entity", 🧱 as walls, simple color als floor?)
-- rendering the player 🧝 
 - moving the player
 - "collision detection"
 - collecting things
