@@ -28,6 +28,29 @@ type TileType =
     | Wall
     | Floor
 
+type PositionData = {
+    X:int
+    Y:int
+}
+
+type DrawableData = {
+    Icon: string
+}
+
+type Component =
+    | Position of PositionData
+    | Drawable of DrawableData
+
+type Entity = {
+    Id:Guid
+    Components: Component list
+}
+
+type DrawableEntity = {
+    DrawableData : DrawableData
+    Position : PositionData
+}
+
 type World = TileType[]
 type Sound = {
     SoundId : Guid
@@ -38,6 +61,7 @@ let getSoundId (sound : Sound) = sound.SoundId
 
 let worldWidth = 8
 let worldHeight = 8
+let gridSize = 64
 
 let createWorld () =
     let allWalls = seq { 1 .. worldWidth } |> Seq.map (fun _ -> Wall) |> Seq.toList
@@ -47,13 +71,21 @@ let createWorld () =
 let coordinatesToArrayIndex x y = 
     x + (y * worldWidth)
 
+let spawnPlayer () : Entity=
+    {
+        Id = Guid.NewGuid()
+        Components = [Drawable {Icon = "🧝"}; Position{X=1;Y=1;} ]
+    }
+
 type Model =
     { GameState: GameState
       PlayerDirection: Direction
       PlayingSound: string option
       PlayingSounds: Sound list
       PlayMusic: bool
-      World : World }
+      World : World
+      Entities : Entity list
+      EntitiesToDraw : DrawableEntity list }
 
 let init () : Model =
     { GameState = Start
@@ -61,7 +93,9 @@ let init () : Model =
       PlayingSound = None
       PlayingSounds = []
       PlayMusic = false
-      World = createWorld() }
+      World = createWorld()
+      Entities = []
+      EntitiesToDraw = [] }
 
 let keyToDirection (event: KeyboardEvent) =
     match event.code with
@@ -78,6 +112,7 @@ let getPlayingSound m = m.PlayingSound
 let getPlayingSounds m = m.PlayingSounds
 let getPlayMusic m = m.PlayMusic
 let getWorld m = m.World
+let getEntitiesToDraw m = m.EntitiesToDraw
 
 // --- MESSAGES ---
 type Message =
@@ -88,18 +123,52 @@ type Message =
     | SoundPlayed of Guid
     | SoundPlaying of Guid
 
+let isPosition (c:Component) =
+    match c with 
+    | Position _ -> true
+    | _ -> false
 
+let isDrawable (c:Component) =
+    match c with 
+    | Drawable _ -> true
+    | _ -> false
 
-let tick model =
-    model
+let getPosition (c:Component) : PositionData =
+    match c with
+    | Position x -> x
+    | _ -> failwith "Is not Position"
+
+let getDrawable (c:Component) : DrawableData =
+    match c with
+    | Drawable x -> x
+    | _ -> failwith "Is not Drawable"
+
+let drawableSystem (entities : Entity list) : DrawableEntity list =
+    List.filter (fun (e:Entity) -> List.exists isPosition e.Components && List.exists isDrawable e.Components) entities
+    |> List.map (fun e -> 
+        let position = List.find isPosition e.Components |> getPosition
+        let drawable = List.find isDrawable e.Components |> getDrawable
+        
+        {
+            DrawableData = drawable
+            Position = position
+        }
+        ) 
+
+let tick (model : Model) =
+    let entitiesToDraw = drawableSystem model.Entities
+    {model with EntitiesToDraw = entitiesToDraw}
 
 // --- MESSAGE HANDLING, MODEL UPDATES ---
 let update (msg: Message) (model: Model) : Model =
     match msg with
-    | StartGame -> { model with GameState = Playing }
+    | StartGame -> { model with GameState = Playing; Entities = [spawnPlayer()] }
     | KeyDown event ->
-        let direction = event |> keyToDirection
-        tick { model with PlayerDirection = direction }
+        if model.GameState = Playing then
+            let direction = event |> keyToDirection
+            tick { model with PlayerDirection = direction }
+        else
+            model
         
     | ToggleMusic -> { model with PlayMusic = not model.PlayMusic }
     | PlaySound soundFileName -> 
@@ -147,22 +216,15 @@ let drawWorld (world : World) =
 
     fragment (Array.map createRow rows)
 
+let drawEntity (drawableEntity : DrawableEntity) : SutilElement =
+    Html.div [  Html.text drawableEntity.DrawableData.Icon 
+                style [Css.positionAbsolute; Css.left (gridSize * drawableEntity.Position.X); Css.top (gridSize * drawableEntity.Position.Y); ]]
+
 let playView (model: IStore<Model>) (dispatch: Dispatch<Message>) =
     Html.div [ Html.div "PLAY"
                Bind.el ((model |> Store.map getWorld), drawWorld)
-               Bind.el (
-                   (model |> Store.map getDirection),
-                   (fun d ->
-                       Html.div [ Html.button [ type' "button"
-                                                text "Toggle music"
-                                                onClick (fun _ -> ToggleMusic |> dispatch) [] ]
-                                  Html.button [ type' "button"
-                                                text "Make a sound"
-                                                onClick (fun _ -> PlaySound "pickup-Enter.wav" |> dispatch) [] ]
-                                  Html.button [ type' "button"
-                                                text "Make another sound"
-                                                onClick (fun _ -> PlaySound "gameover-Event3.mp3" |> dispatch) [] ] ])
-               ) ]
+               Bind.each ((model |> Store.map getEntitiesToDraw), drawEntity)
+               ]
 
 let noopView () = Html.h1 "NOTHING HERE YET"
 
