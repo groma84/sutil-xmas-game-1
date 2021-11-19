@@ -12,32 +12,37 @@ open Query
 open Components
 
 
-let worldWidth = 8
-let worldHeight = 8
-let gridSize = 64
+let worldWidth = 12
+let worldHeight = 12
+let gridSize = 32
 
 let createWorld () =
-    let allWalls =
-        seq { 1 .. worldWidth }
-        |> Seq.map (fun _ -> Wall)
-        |> Seq.toList
+    let worldString = """============
+=.....=....=
+=.....=....=
+=====.=....=
+=..........=
+=..........=
+=..........=
+========.===
+=......=...=
+=......=...=
+=..........=
+============
+"""
 
-    let withFloors =
-        [ Wall
-          Floor
-          Floor
-          Floor
-          Floor
-          Floor
-          Floor
-          Wall ]
-
-    allWalls
-    @ withFloors
-      @ withFloors
-        @ withFloors
-          @ withFloors @ withFloors @ withFloors @ allWalls
-    |> List.toArray
+    let parseSymbol s =
+        match s with
+        | '=' -> Some Wall
+        | '.' -> Some Floor
+        | _ -> None
+    
+    worldString.Split(Environment.NewLine.ToCharArray())
+    |> Array.map (fun rowString -> rowString.ToCharArray())
+    |> Array.map (Array.map parseSymbol)
+    |> Array.concat
+    |> Array.filter Option.isSome
+    |> Array.map Option.get
 
 let coordinatesToArrayIndex x y = x + (y * worldWidth)
 
@@ -52,8 +57,6 @@ let spawnOgre x y : Entity =
       Components =
         [ Drawable { Icon = "👹" }
           Position { X = x; Y = y } ] }
-
-
 
 let init () : Model =
     { GameState = Start
@@ -121,14 +124,11 @@ let tick (model: Model) =
 let update (msg: Message) (model: Model) : Model =
     match msg with
     | StartGame ->
-        let monsterX = Random.randomInt 2 (worldWidth - 1)
-        let monsterY = Random.randomInt 2 (worldHeight - 1)
-
         { model with
             GameState = Playing
             Entities =
                 [ spawnPlayer ()
-                  spawnOgre monsterX monsterY ] }
+                  spawnOgre 7 5 ] }
     | KeyDown event ->
         if model.GameState = Playing then
             let direction = event |> keyToDirection
@@ -178,7 +178,7 @@ let drawWorld (world: World) =
 
     let wall () =
         Html.span [ Attr.className "wall"
-                    Html.text "🧱" ]
+                    Html.text " " ]
 
     let rows = Array.chunkBySize worldWidth world
 
@@ -187,18 +187,19 @@ let drawWorld (world: World) =
         | Floor -> floor ()
         | Wall -> wall ()
 
-    let createRow row = Html.div (Array.map createCell row)
+    let createRow row = Html.div ([Attr.className "map-row"] @ (row |> Array.toList |> List.map createCell))
 
     fragment (Array.map createRow rows)
 
 let drawEntity (drawableEntity: DrawableEntity) : SutilElement =
     Html.div [ Html.text drawableEntity.DrawableData.Icon
+               Attr.className "sprite-icon"
                style [ Css.positionAbsolute
                        Css.left (gridSize * drawableEntity.Position.X)
                        Css.top (gridSize * drawableEntity.Position.Y) ] ]
 
 let playView (model: IStore<Model>) (dispatch: Dispatch<Message>) =
-    Html.div [ Html.div "PLAY"
+    Html.div [ Attr.className "game-world"
                Bind.el ((model |> Store.map getWorld), drawWorld)
                Bind.each ((model |> Store.map getEntitiesToDraw), drawEntity) ]
 

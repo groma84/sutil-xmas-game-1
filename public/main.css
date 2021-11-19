@@ -1,13 +1,29 @@
+:root {
+    --grid-size: 32px;
+  }
+
+.game-world {
+    font-size: calc(0.7 * var(--grid-size));
+}
+
+.map-row {
+    line-height: 0;
+}
+
 .floor {
-    width: 64px;
-    height: 64px;
+    width: var(--grid-size);
+    height: var(--grid-size);
     display: inline-block;
     background-color: lightgray;
 }
 
 .wall {
-    width: 64px;
-    height: 64px;
+    width: var(--grid-size);
+    height: var(--grid-size);
     display: inline-block;
+    background-color: brown;
+}
 
+.sprite-icon {
+    padding: 4px;
 }
