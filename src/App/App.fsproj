@@ -4,6 +4,10 @@
     <UseLocalSutil>False</UseLocalSutil>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="Components.fs" />
+    <Compile Include="Model.fs" />
+    <Compile Include="Query.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <Choose>
