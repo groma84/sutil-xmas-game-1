@@ -1,17 +1,14 @@
 # Saving Santa's (basement) with Sutil
 
 ## What's next
-- moving the player
-- "collision detection"
 - collecting things
-- ogres and ogre movement
+- leaving the level ⏫
+- winning the game
 - player health and attacks
 - ogre attacks 
 - losing the game
-- leaving the level ⏫
-- winning the game
 - ghosts and ghost movement and ghost attacks
-- adding more levels?
+- sounds
 
 ## Requirements
 I tested it with:

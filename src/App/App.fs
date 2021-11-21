@@ -100,7 +100,7 @@ let drawableSystem (entities: Entity list) : DrawableEntity list =
         { DrawableData = draw
           Position = pos })
 
-let moveByInputSystem (world : World) (blockingEntities : Entity list) (movingEntity : Entity) (direction : Direction) : Entity =
+let moveInDirection (world : World) (blockingEntities : Entity list) (movingEntity : Entity) (direction : Direction) : Entity =
     let currentPosition = getComponent position movingEntity
     let sanitizePosition pos = 
         {pos with X = Math.Min(worldWidth, Math.Max(0, pos.X)); Y = Math.Min(worldHeight, Math.Max(0, pos.Y))}
@@ -134,15 +134,15 @@ let moveByInputSystem (world : World) (blockingEntities : Entity list) (movingEn
 let moveRandomlySystem world blockingEntities movingEntities =
     let randomDirection () =
         match Random.randomInt 0 3 with
-        | 0 -> Direction.Down
-        | 1 -> Direction.Left
-        | 2 -> Direction.Right
-        | 3 -> Direction.Up
-        | _ -> Direction.Noop
+        | 0 -> Down
+        | 1 -> Left
+        | 2 -> Right
+        | 3 -> Up
+        | _ -> Noop
     
     let (_, movedEntities) = List.fold 
                                 (fun (updatedBlockers, alreadyMoved) movingEntity -> 
-                                    let movedEntity = moveByInputSystem world updatedBlockers movingEntity (randomDirection ())
+                                    let movedEntity = moveInDirection world updatedBlockers movingEntity (randomDirection ())
                                     let updatedMoved =  movedEntity :: alreadyMoved
                                     let blockersAfter = replaceEntity updatedBlockers movedEntity
                                     (blockersAfter, updatedMoved)
@@ -154,7 +154,7 @@ let moveRandomlySystem world blockingEntities movingEntities =
 
 let tick (model: Model) =
     // TODO: In the end this probably should be a fold over the systems with the model (and maybe Side Effects list of things like sounds?) as state?
-    let playerAfterMovement = moveByInputSystem 
+    let playerAfterMovement = moveInDirection 
                                 model.World 
                                 (model.Entities |> hasComponents [isPosition; isBlocksMovement])
                                 (model.Entities |> hasComponents [isPlayer; isPosition; isMoveByKeyboard] |> List.head)
@@ -212,7 +212,7 @@ let update (msg: Message) (model: Model) : Model =
 // --- VIEWS ---
 let startView (dispatch) =
     Html.div [ Html.h1 "Saving Santa's"
-               Html.div [ Html.p "Help Santa to reclaim his basement and collect all the presents!"
+               Html.div [ Html.p "You 🧝 need to help Santa to reclaim his basement and collect all the presents!"
                           Html.p
                               "Move with the arrow keys. Moving unto an item picks it up. Moving into an enemy attacks."
                           Html.p "Avoid 👹 that run around randomly and hit you if you come too close."
