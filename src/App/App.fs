@@ -87,31 +87,13 @@ type Message =
     | SoundPlayed of Guid
     | SoundPlaying of Guid
 
-let position (c: Component) =
-    match c with
-    | Position _ -> true
-    | _ -> false
 
-let drawable (c: Component) =
-    match c with
-    | Drawable _ -> true
-    | _ -> false
-
-let getPosition (c: Component) : PositionData =
-    match c with
-    | Position x -> x
-    | _ -> failwith "Is not Position"
-
-let getDrawable (c: Component) : DrawableData =
-    match c with
-    | Drawable x -> x
-    | _ -> failwith "Is not Drawable"
 
 let drawableSystem (entities: Entity list) : DrawableEntity list =
     entities
-    |> hasComponents [position; drawable;] 
+    |> hasComponents [isPosition; isDrawable;] 
     |> List.map (fun entity ->
-        let (pos, draw) = getComponents2 (position, getPosition) (drawable, getDrawable) entity
+        let (pos, draw) = getComponents2 (position, drawable) entity
 
         { DrawableData = draw
           Position = pos })
