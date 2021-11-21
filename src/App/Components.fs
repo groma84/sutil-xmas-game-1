@@ -17,8 +17,22 @@ type DrawableEntity = {
 }
 
 type Component =
+    | Player
+    | Enemy
     | Position of PositionData
     | Drawable of DrawableData
+    | MoveByKeyboard
+    | BlocksMovement
+
+let isPlayer (c: Component) =
+    match c with
+    | Player -> true
+    | _ -> false   
+
+let isEnemy (c: Component) =
+    match c with
+    | Enemy -> true
+    | _ -> false  
 
 let isPosition (c: Component) =
     match c with
@@ -40,7 +54,24 @@ let getDrawable (c: Component) : DrawableData =
     | _ -> failwith "Is not Drawable"
 let drawable = (isDrawable, getDrawable)
 
+let isMoveByKeyboard (c: Component) =
+    match c with
+    | MoveByKeyboard -> true
+    | _ -> false 
+
+let isBlocksMovement (c: Component) =
+    match c with
+    | BlocksMovement -> true
+    | _ -> false 
+
+[<NoEquality>]
+[<NoComparison>]
 type Entity = {
     Id : Guid
     Components : Component list
 }
+let entityEq e1 e2 =
+    e1.Id = e2.Id
+let replaceEntity (allEntities : Entity list) (changedEntity : Entity) : Entity list =
+    changedEntity :: List.filter (fun e -> not <| entityEq e changedEntity) allEntities
+    

@@ -49,14 +49,19 @@ let coordinatesToArrayIndex x y = x + (y * worldWidth)
 let spawnPlayer () : Entity =
     { Id = Guid.NewGuid()
       Components =
-        [ Drawable { Icon = "🧝" }
-          Position { X = 1; Y = 1 } ] }
+        [ Player
+          Drawable { Icon = "🧝" }
+          Position { X = 1; Y = 1 }
+          MoveByKeyboard
+          BlocksMovement ] }
 
 let spawnOgre x y : Entity =
     { Id = Guid.NewGuid()
       Components =
-        [ Drawable { Icon = "👹" }
-          Position { X = x; Y = y } ] }
+        [ Enemy
+          Drawable { Icon = "👹" }
+          Position { X = x; Y = y }
+          BlocksMovement ] }
 
 let init () : Model =
     { GameState = Start
@@ -76,8 +81,6 @@ let keyToDirection (event: KeyboardEvent) =
     | "ArrowDown" -> Down
     | _ -> Noop
 
-
-
 // --- MESSAGES ---
 type Message =
     | StartGame
@@ -86,8 +89,6 @@ type Message =
     | PlaySound of string // TODO Make sounds DU?
     | SoundPlayed of Guid
     | SoundPlaying of Guid
-
-
 
 let drawableSystem (entities: Entity list) : DrawableEntity list =
     entities
@@ -98,9 +99,46 @@ let drawableSystem (entities: Entity list) : DrawableEntity list =
         { DrawableData = draw
           Position = pos })
 
+let moveByInputSystem (world : World) (blockingEntities : Entity list) (movingEntity : Entity) (direction : Direction) : Entity =
+    let currentPosition = getComponent position movingEntity
+    let sanitizePosition pos = 
+        {pos with X = Math.Min(worldWidth, Math.Max(0, pos.X)); Y = Math.Min(worldHeight, Math.Max(0, pos.Y))}
+
+    let tryPosition =
+        match direction with
+        | Up -> {currentPosition with Y = currentPosition.Y - 1} 
+        | Down -> {currentPosition with Y = currentPosition.Y + 1} 
+        | Left -> {currentPosition with X = currentPosition.X - 1} 
+        | Right -> {currentPosition with X = currentPosition.X + 1} 
+        | Noop -> currentPosition
+        |> sanitizePosition 
+
+    let isWall {X = x; Y = y} =
+        let worldIndex = coordinatesToArrayIndex x y
+        world.[worldIndex] = Wall
+    
+    let isBlockedByOtherEntity {X = x; Y = y} =
+        let blockingPositions = List.map (getComponent position) blockingEntities
+        List.exists (fun {X = x'; Y = y'} -> x = x' && y = y') blockingPositions
+
+    let newPosition = 
+        if (not (isWall tryPosition || isBlockedByOtherEntity tryPosition)) then
+            tryPosition
+        else
+            currentPosition
+        |> Position
+
+    replaceComponent isPosition movingEntity newPosition
+
 let tick (model: Model) =
-    let entitiesToDraw = drawableSystem model.Entities
-    { model with EntitiesToDraw = entitiesToDraw }
+    let playerAfterMovement = moveByInputSystem 
+                                                model.World 
+                                                (model.Entities |> hasComponents [isPosition; isBlocksMovement])
+                                                (model.Entities |> hasComponents [isPlayer; isPosition; isMoveByKeyboard] |> List.head)
+                                                model.PlayerDirection
+    let m1 = {model with Entities = replaceEntity model.Entities playerAfterMovement}
+
+    { m1 with EntitiesToDraw = drawableSystem m1.Entities }
 
 // --- MESSAGE HANDLING, MODEL UPDATES ---
 let update (msg: Message) (model: Model) : Model =
@@ -111,6 +149,8 @@ let update (msg: Message) (model: Model) : Model =
             Entities =
                 [ spawnPlayer ()
                   spawnOgre 7 5 ] }
+        |> tick
+
     | KeyDown event ->
         if model.GameState = Playing then
             let direction = event |> keyToDirection
@@ -119,6 +159,7 @@ let update (msg: Message) (model: Model) : Model =
             model
 
     | ToggleMusic -> { model with PlayMusic = not model.PlayMusic }
+    
     | PlaySound soundFileName ->
         let newSound =
             { SoundId = Guid.NewGuid()
@@ -126,8 +167,10 @@ let update (msg: Message) (model: Model) : Model =
               SoundState = Queued }
 
         { model with PlayingSounds = newSound :: model.PlayingSounds }
+    
     | SoundPlayed soundId ->
         { model with PlayingSounds = List.filter (fun s -> s.SoundId <> soundId) model.PlayingSounds }
+    
     | SoundPlaying soundId ->
         let setPlayingSoundToStarted s =
             if (s.SoundId = soundId) then
