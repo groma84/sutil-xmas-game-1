@@ -61,6 +61,7 @@ let spawnOgre x y : Entity =
         [ Enemy
           Drawable { Icon = "👹" }
           Position { X = x; Y = y }
+          MoveRandomly
           BlocksMovement ] }
 
 let init () : Model =
@@ -130,15 +131,43 @@ let moveByInputSystem (world : World) (blockingEntities : Entity list) (movingEn
 
     replaceComponent isPosition movingEntity newPosition
 
+let moveRandomlySystem world blockingEntities movingEntities =
+    let randomDirection () =
+        match Random.randomInt 0 3 with
+        | 0 -> Direction.Down
+        | 1 -> Direction.Left
+        | 2 -> Direction.Right
+        | 3 -> Direction.Up
+        | _ -> Direction.Noop
+    
+    let (_, movedEntities) = List.fold 
+                                (fun (updatedBlockers, alreadyMoved) movingEntity -> 
+                                    let movedEntity = moveByInputSystem world updatedBlockers movingEntity (randomDirection ())
+                                    let updatedMoved =  movedEntity :: alreadyMoved
+                                    let blockersAfter = replaceEntity updatedBlockers movedEntity
+                                    (blockersAfter, updatedMoved)
+                                )
+                                (blockingEntities, [])
+                                movingEntities
+    
+    movedEntities
+
 let tick (model: Model) =
+    // TODO: In the end this probably should be a fold over the systems with the model (and maybe Side Effects list of things like sounds?) as state?
     let playerAfterMovement = moveByInputSystem 
-                                                model.World 
-                                                (model.Entities |> hasComponents [isPosition; isBlocksMovement])
-                                                (model.Entities |> hasComponents [isPlayer; isPosition; isMoveByKeyboard] |> List.head)
-                                                model.PlayerDirection
+                                model.World 
+                                (model.Entities |> hasComponents [isPosition; isBlocksMovement])
+                                (model.Entities |> hasComponents [isPlayer; isPosition; isMoveByKeyboard] |> List.head)
+                                model.PlayerDirection
     let m1 = {model with Entities = replaceEntity model.Entities playerAfterMovement}
 
-    { m1 with EntitiesToDraw = drawableSystem m1.Entities }
+    let movedRandomly = moveRandomlySystem 
+                            m1.World 
+                            (m1.Entities |> hasComponents [isPosition; isBlocksMovement])
+                            (m1.Entities |> hasComponents [isPosition; isMoveRandomly])
+    let m2 = List.fold (fun m e -> {m with Entities = replaceEntity m.Entities e}) m1 movedRandomly
+
+    { m2 with EntitiesToDraw = drawableSystem m2.Entities }
 
 // --- MESSAGE HANDLING, MODEL UPDATES ---
 let update (msg: Message) (model: Model) : Model =

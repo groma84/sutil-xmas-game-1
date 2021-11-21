@@ -22,6 +22,7 @@ type Component =
     | Position of PositionData
     | Drawable of DrawableData
     | MoveByKeyboard
+    | MoveRandomly
     | BlocksMovement
 
 let isPlayer (c: Component) =
@@ -57,6 +58,11 @@ let drawable = (isDrawable, getDrawable)
 let isMoveByKeyboard (c: Component) =
     match c with
     | MoveByKeyboard -> true
+    | _ -> false 
+
+let isMoveRandomly (c: Component) =
+    match c with
+    | MoveRandomly -> true
     | _ -> false 
 
 let isBlocksMovement (c: Component) =
