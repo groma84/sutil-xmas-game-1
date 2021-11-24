@@ -73,6 +73,7 @@ type Message =
     | PlaySound of string // TODO Make sounds DU?
     | SoundPlayed of Guid
     | SoundPlaying of Guid
+    | SetDirection of Direction
 
 
 
@@ -136,6 +137,12 @@ let update (msg: Message) (model: Model) : Model =
 
         { model with PlayingSounds = List.map setPlayingSoundToStarted model.PlayingSounds }
 
+    | SetDirection direction ->
+        if model.GameState = Playing then
+            tick { model with PlayerDirection = direction }
+        else
+            model
+
 // --- VIEWS ---
 let startView (dispatch) =
     Html.div [ Html.h1 "Saving Santa's"
@@ -179,10 +186,57 @@ let drawEntity (drawableEntity: DrawableEntity) : SutilElement =
                        Css.left (gridSize * drawableEntity.Position.X)
                        Css.top (gridSize * drawableEntity.Position.Y) ] ]
 
+let drawHud (dispatch: Dispatch<Message>) (player: Entity) =
+    // TODO: Read real values from the player Entity
+    let currentHealth = 2
+    let maximumHealth = 3
+    let lostHealth = maximumHealth - currentHealth
+    let questItemsDrawable : DrawableData list = [{
+        Icon = "🎁"
+    }]
+
+    let hearts = Seq.append
+                    (Seq.map (fun _ -> Html.span [Html.text "❤️"]) (seq [1..currentHealth]))
+                    (Seq.map (fun _ -> Html.span [Html.text "💔"]) (seq [1..lostHealth]))
+
+    let items = List.map (fun drawable -> Html.span [Html.text drawable.Icon] ) questItemsDrawable
+
+    let controls = List.map (fun (direction, icon) -> 
+                                Html.button [   
+                                    class' "button hud-button"
+                                    text icon
+                                    onClick (fun _ -> dispatch <| SetDirection direction) []
+                                ]
+                            ) 
+                    [
+                        (Left, "⬅️")
+                        (Right, "➡️")
+                        (Up, "⬆️")
+                        (Down, "⬇️")
+                    ]
+
+    Html.div [ 
+        class' "hud"
+        Html.div [
+            class' "hud-player-data"
+            Html.div [fragment hearts]
+            Html.div [fragment items]
+        ]
+        Html.div [
+            class' "hud-controls"
+            fragment controls
+        ]
+    ]
+
+let getPlayerEntity (model: Model) : Entity =
+    model.Entities |> hasComponent isPlayer |> List.head
+
 let playView (model: IStore<Model>) (dispatch: Dispatch<Message>) =
     Html.div [ Attr.className "game-world"
                Bind.el ((model |> Store.map getWorld), drawWorld)
-               Bind.each ((model |> Store.map getEntitiesToDraw), drawEntity) ]
+               Bind.each ((model |> Store.map getEntitiesToDraw), drawEntity)
+               Bind.el ((model |> Store.map getPlayerEntity), (drawHud dispatch))
+                ]
 
 let noopView () = Html.h1 "NOTHING HERE YET"
 

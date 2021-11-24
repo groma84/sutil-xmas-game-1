@@ -2,6 +2,10 @@
     --grid-size: 32px;
   }
 
+#sutil-app {
+    width: fit-content;
+}
+
 .game-world {
     font-size: calc(0.7 * var(--grid-size));
 }
@@ -26,4 +30,25 @@
 
 .sprite-icon {
     padding: 4px;
+}
+
+.hud {
+    display: flex;
+    justify-content: space-between;
+}
+
+.hud-player-data {
+    display: flex;
+    flex-direction: column;
+    align-content: flex-start;
+}
+
+.hud-controls {
+    display: flex;
+}
+
+.hud-button {
+    padding: 0.25rem;
+    margin-left: 1rem;
+    font-size: 2rem;
 }
