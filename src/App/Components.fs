@@ -2,6 +2,8 @@ module Components
 
 open System
 
+
+
 type PositionData = {
     X : int
     Y : int
@@ -16,19 +18,29 @@ type DrawableEntity = {
     Position : PositionData
 }
 
+
 type Component =
-    | Player
+    | Player of PlayerData
     | Enemy
     | Position of PositionData
     | Drawable of DrawableData
     | MoveByKeyboard
     | MoveRandomly
     | BlocksMovement
+    | QuestItem
+    | CanBePickedUp
+and PlayerData = {
+    Inventory : Component list
+}
 
 let isPlayer (c: Component) =
     match c with
-    | Player -> true
+    | Player _ -> true
     | _ -> false   
+let getPlayer (c: Component) : PlayerData =
+    match c with
+    | Player x -> x
+    | _ -> failwith "Is not Player"
 
 let isEnemy (c: Component) =
     match c with
@@ -68,6 +80,16 @@ let isMoveRandomly (c: Component) =
 let isBlocksMovement (c: Component) =
     match c with
     | BlocksMovement -> true
+    | _ -> false 
+
+let isQuestItem (c: Component) =
+    match c with
+    | QuestItem -> true
+    | _ -> false 
+
+let isCanBePickedUp (c: Component) =
+    match c with
+    | CanBePickedUp -> true
     | _ -> false 
 
 [<NoEquality>]

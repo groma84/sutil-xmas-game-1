@@ -4,10 +4,13 @@
     <UseLocalSutil>False</UseLocalSutil>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Constants.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Components.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Query.fs" />
+    <Compile Include="Systems.fs" />
+    <Compile Include="Spawner.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <Choose>
