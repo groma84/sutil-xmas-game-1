@@ -1,8 +1,6 @@
 # Saving Santa's (basement) with Sutil
 
 ## What's next
-- HUD with Mobile tap control arrows
-- collecting things
 - leaving the level ⏫
 - winning the game
 - player health

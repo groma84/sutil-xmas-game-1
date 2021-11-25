@@ -93,8 +93,9 @@ let tick (model: Model) =
     let m2 = List.fold (fun m e -> {m with Entities = replaceEntity m.Entities e}) m1 movedRandomly
 
     let m3 = {m2 with Entities = modifyEntitiesByPickup m2.Entities}
+    let m4 = {m3 with Entities = spawnExitAfterAllQuestItemsHaveBeenCollected m3.Entities}
 
-    { m3 with EntitiesToDraw = drawableSystem m3.Entities }
+    { m4 with EntitiesToDraw = drawableSystem m4.Entities }
 
 // --- MESSAGE HANDLING, MODEL UPDATES ---
 let update (msg: Message) (model: Model) : Model =

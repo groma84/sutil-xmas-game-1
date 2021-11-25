@@ -9,20 +9,20 @@
     <Compile Include="Components.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Query.fs" />
-    <Compile Include="Systems.fs" />
     <Compile Include="Spawner.fs" />
+    <Compile Include="Systems.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <Choose>
     <When Condition=" '$(UseLocalSutil)'=='True' ">
-        <ItemGroup>
-            <ProjectReference Include="..\..\..\Sutil\src\Sutil\Sutil.fsproj" />
-        </ItemGroup>
+      <ItemGroup>
+        <ProjectReference Include="..\..\..\Sutil\src\Sutil\Sutil.fsproj" />
+      </ItemGroup>
     </When>
     <When Condition=" '$(UseLocalSutil)'=='False' ">
-        <ItemGroup>
-            <PackageReference Include="Sutil" Version="1.0.0-*" />
-        </ItemGroup>
+      <ItemGroup>
+        <PackageReference Include="Sutil" Version="1.0.0-*" />
+      </ItemGroup>
     </When>
   </Choose>
 </Project>

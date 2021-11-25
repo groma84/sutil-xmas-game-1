@@ -6,6 +6,7 @@ open Constants
 open Types
 open Components
 open Query
+open Spawner
 
 let drawableSystem (entities: Entity list) : DrawableEntity list =
     entities
@@ -97,3 +98,12 @@ let modifyEntitiesByPickup (entities: Entity list) : Entity list =
             |> List.exists (fun y -> entityEq x y))
 
     remainingEntities
+
+let spawnExitAfterAllQuestItemsHaveBeenCollected (entities: Entity list) : Entity list =
+    // do all quest items exist?
+    let areAllCollected = entities |> hasComponent isQuestItem |> List.isEmpty
+    if areAllCollected then
+        spawnLevelExit 1 8 :: entities
+    else
+        entities
+

@@ -30,3 +30,12 @@ let spawnQuestItem x y (icon : string) : Entity =
           Drawable { Icon = icon }
           Position { X = x; Y = y }
           CanBePickedUp ] }
+
+let spawnLevelExit x y : Entity =
+    { Id = newId()
+      Components =
+        [ LevelExit
+          Drawable { Icon = "⏫" }
+          Position { X = x; Y = y }
+        ]
+    }
