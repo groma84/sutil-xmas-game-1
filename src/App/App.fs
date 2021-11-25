@@ -92,7 +92,9 @@ let tick (model: Model) =
                             (m1.Entities |> hasComponents [isPosition; isMoveRandomly])
     let m2 = List.fold (fun m e -> {m with Entities = replaceEntity m.Entities e}) m1 movedRandomly
 
-    { m2 with EntitiesToDraw = drawableSystem m2.Entities }
+    let m3 = {m2 with Entities = modifyEntitiesByPickup m2.Entities}
+
+    { m3 with EntitiesToDraw = drawableSystem m3.Entities }
 
 // --- MESSAGE HANDLING, MODEL UPDATES ---
 let update (msg: Message) (model: Model) : Model =

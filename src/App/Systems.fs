@@ -68,3 +68,32 @@ let moveRandomlySystem world blockingEntities movingEntities =
     
     movedEntities
 
+let modifyEntitiesByPickup (entities: Entity list) : Entity list =
+    let collectableEntities = entities |> hasComponents [isPosition; isCanBePickedUp; isQuestItem]
+    
+    let previousPlayer =
+        entities 
+            |> hasComponents [isPosition; isPlayer;] 
+            |> List.head
+    
+    let (playerPosition, playerInventory) = 
+        previousPlayer
+        |> getComponents2 ((isPosition,getPosition), (isPlayer,getPlayer))
+    
+    let collectedEntities = 
+        collectableEntities 
+        |> List.filter (fun x -> getComponent (isPosition,getPosition) x = playerPosition)
+    
+    let collectedDrawables = List.map (getComponent (isDrawable,getDrawable) >> Drawable) collectedEntities
+
+    let newPlayerInventory = {playerInventory with Inventory = playerInventory.Inventory |> List.append collectedDrawables} |> Player
+
+    let changedPlayer = replaceComponent isPlayer previousPlayer newPlayerInventory
+
+    let (_, remainingEntities) = 
+        replaceEntity entities changedPlayer 
+        |> List.partition (fun x -> 
+            collectedEntities 
+            |> List.exists (fun y -> entityEq x y))
+
+    remainingEntities
