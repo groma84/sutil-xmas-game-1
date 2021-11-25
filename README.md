@@ -22,3 +22,4 @@ I tested it with:
 ## Running it
 - The first time: `dotnet tool restore && npm install`
 - Afterwards just: `npm run start`
+- Browser URL: https://localhost:8080
