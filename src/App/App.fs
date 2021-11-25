@@ -193,9 +193,8 @@ let drawHud (dispatch: Dispatch<Message>) (player: Entity) =
     let currentHealth = 2
     let maximumHealth = 3
     let lostHealth = maximumHealth - currentHealth
-    let questItemsDrawable : DrawableData list = [{
-        Icon = "🎁"
-    }]
+    let questItemsDrawable : DrawableData list =
+        (getComponent (isPlayer, getPlayer) player).Inventory |> List.map getDrawable
 
     let hearts = Seq.append
                     (Seq.map (fun _ -> Html.span [Html.text "❤️"]) (seq [1..currentHealth]))
